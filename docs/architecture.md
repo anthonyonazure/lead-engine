@@ -38,12 +38,20 @@ Every Anthropic call writes a row to `ai_calls` with token counts, model, latenc
 ### Model tiering
 Scoring runs on Haiku (cheap, fast, deterministic enough for a numeric score). Drafting runs on Sonnet (worth the cost for tone). Both are configurable via env vars — swap in a different provider by changing `services/claude.ts`.
 
-## What's stubbed
+## What's wired vs. stubbed
 
-- **SMS sending.** Webhooks accept missed-call payloads but the text-back currently logs to console. Wire Twilio in `routes/webhooks.ts` and `services/outreach.ts`.
-- **Email sending.** Drafts are stored in the `outreach` table with `sent_at = NULL`. Add a sender (Postmark, Resend, SES) and a "Send" button in the UI.
-- **Calendar integration.** No Google Cal / Calendly today. The "propose a time" prompt rule assumes the operator hand-picks; productionize by exposing free/busy.
+**Wired:**
+- **SMS via Twilio.** `services/sms.ts` uses the official Twilio SDK. Configured via `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`. The missed-call webhook auto-sends a text-back; the dashboard "Send" button on a draft pushes it through Twilio.
+- **Email via Postmark.** `services/email.ts` uses the Postmark Node SDK with `MessageStream: 'outbound'`. Configured via `POSTMARK_SERVER_TOKEN`, `POSTMARK_FROM_ADDRESS`, `POSTMARK_REPLY_TO`.
+- **Graceful degradation.** When credentials aren't set, both channels return `status: 'simulated'` and log to console — every test, demo, and CI run can exercise the full code path without a paid account.
+- **Outreach record lifecycle.** The `outreach` table tracks `status` (`draft` / `sent` / `simulated` / `error`), `provider_id` (Twilio SID or Postmark MessageID), `error`, and `sent_at`. Read it for delivery history and debugging.
+- **Stage transition on send.** When a `qualified` lead's first outreach is sent, the lead automatically moves to `engaged`.
+
+**Stubbed:**
+- **Calendar integration.** No Google Cal / Calendly. The "propose a time" prompt rule assumes the operator hand-picks; productionize by exposing free/busy.
 - **Multi-tenant.** Single business per deployment. For a productized service ("ChiroGrow", "HVACFlow"), add a `tenant_id` column and scope queries.
+- **Inbound SMS replies.** Twilio's inbound webhook isn't wired — adding a `/api/webhooks/twilio-inbound` handler that creates an outreach reply row is a ~30-line change.
+- **Re-engagement scheduling.** No scheduled job runner today. For nurture sequences, queue a `cron` (or pg-boss / BullMQ if you swap to Postgres + Redis).
 
 ## Deployment notes
 

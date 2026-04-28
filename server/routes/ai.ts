@@ -54,11 +54,11 @@ aiRouter.post('/draft/:id', async (req, res, next) => {
       notes: lead.notes,
     }, channel);
 
-    db.prepare(
-      'INSERT INTO outreach (lead_id, channel, subject, body) VALUES (?, ?, ?, ?)'
-    ).run(lead.id, channel, draft.subject ?? null, draft.body);
+    const insertResult = db.prepare(
+      'INSERT INTO outreach (lead_id, channel, subject, body, rationale, status) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(lead.id, channel, draft.subject ?? null, draft.body, draft.rationale, 'draft');
 
-    res.json(draft);
+    res.json({ ...draft, id: Number(insertResult.lastInsertRowid) });
   } catch (err) {
     next(err);
   }

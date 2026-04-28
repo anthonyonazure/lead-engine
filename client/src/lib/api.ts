@@ -14,38 +14,62 @@ export interface Lead {
 }
 
 export interface OutreachDraft {
+  id: number;
   channel: 'sms' | 'email';
   subject?: string;
   body: string;
   rationale: string;
 }
 
+export interface Outreach {
+  id: number;
+  leadId: string;
+  channel: 'sms' | 'email';
+  subject: string | null;
+  body: string;
+  rationale: string | null;
+  status: 'draft' | 'sent' | 'simulated' | 'error';
+  providerId: string | null;
+  error: string | null;
+  sentAt: string | null;
+  createdAt: string;
+}
+
 const BASE = '/api';
 
-export async function listLeads(): Promise<Lead[]> {
-  const res = await fetch(`${BASE}/leads`);
-  if (!res.ok) throw new Error(`listLeads failed: ${res.status}`);
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, init);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`${init?.method ?? 'GET'} ${path} → ${res.status}: ${text}`);
+  }
   return res.json();
 }
 
-export async function scoreLead(id: string): Promise<Lead> {
-  const res = await fetch(`${BASE}/ai/score/${id}`, { method: 'POST' });
-  if (!res.ok) throw new Error(`scoreLead failed: ${res.status}`);
-  return res.json();
-}
+export const listLeads = () => request<Lead[]>('/leads');
 
-export async function draftOutreach(id: string, channel: 'sms' | 'email'): Promise<OutreachDraft> {
-  const res = await fetch(`${BASE}/ai/draft/${id}?channel=${channel}`, { method: 'POST' });
-  if (!res.ok) throw new Error(`draftOutreach failed: ${res.status}`);
-  return res.json();
-}
+export const scoreLead = (id: string) =>
+  request<Lead>(`/ai/score/${id}`, { method: 'POST' });
 
-export async function updateStage(id: string, stage: Lead['stage']): Promise<Lead> {
-  const res = await fetch(`${BASE}/leads/${id}/stage`, {
+export const draftOutreach = (id: string, channel: 'sms' | 'email') =>
+  request<OutreachDraft>(`/ai/draft/${id}?channel=${channel}`, { method: 'POST' });
+
+export const updateStage = (id: string, stage: Lead['stage']) =>
+  request<Lead>(`/leads/${id}/stage`, {
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ stage }),
   });
-  if (!res.ok) throw new Error(`updateStage failed: ${res.status}`);
-  return res.json();
-}
+
+export const listOutreach = (leadId: string) =>
+  request<Outreach[]>(`/outreach/lead/${leadId}`);
+
+export const sendOutreach = (id: number) =>
+  request<Outreach>(`/outreach/${id}/send`, { method: 'POST' });
+
+export const updateOutreach = (id: number, body: { subject?: string; body?: string }) =>
+  request<Outreach>(`/outreach/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });

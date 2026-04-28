@@ -43,11 +43,29 @@ db.exec(`
     channel TEXT NOT NULL,
     subject TEXT,
     body TEXT NOT NULL,
+    rationale TEXT,
+    status TEXT NOT NULL DEFAULT 'draft',
+    provider_id TEXT,
+    error TEXT,
     sent_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
   );
 `);
+
+const outreachCols = new Set(
+  (db.prepare(`PRAGMA table_info(outreach)`).all() as Array<{ name: string }>).map((c) => c.name)
+);
+for (const [col, defn] of [
+  ['rationale', 'TEXT'],
+  ['status', `TEXT NOT NULL DEFAULT 'draft'`],
+  ['provider_id', 'TEXT'],
+  ['error', 'TEXT'],
+] as const) {
+  if (!outreachCols.has(col)) {
+    db.exec(`ALTER TABLE outreach ADD COLUMN ${col} ${defn}`);
+  }
+}
 
 export interface LeadRow {
   id: string;

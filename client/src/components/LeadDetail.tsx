@@ -1,5 +1,13 @@
-import { useState } from 'react';
-import { Lead, OutreachDraft, draftOutreach, scoreLead, updateStage } from '../lib/api';
+import { useEffect, useState } from 'react';
+import {
+  Lead,
+  Outreach,
+  draftOutreach,
+  listOutreach,
+  scoreLead,
+  updateStage,
+} from '../lib/api';
+import { OutreachList } from './OutreachList';
 
 interface Props {
   lead: Lead;
@@ -7,9 +15,17 @@ interface Props {
 }
 
 export function LeadDetail({ lead, onUpdate }: Props) {
-  const [draft, setDraft] = useState<OutreachDraft | null>(null);
+  const [outreach, setOutreach] = useState<Outreach[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listOutreach(lead.id).then(setOutreach);
+  }, [lead.id]);
+
+  const refreshOutreach = async () => {
+    setOutreach(await listOutreach(lead.id));
+  };
 
   const handleScore = async () => {
     setBusy('score');
@@ -28,7 +44,8 @@ export function LeadDetail({ lead, onUpdate }: Props) {
     setBusy(`draft-${channel}`);
     setError(null);
     try {
-      setDraft(await draftOutreach(lead.id, channel));
+      await draftOutreach(lead.id, channel);
+      await refreshOutreach();
     } catch (e) {
       setError(String(e));
     } finally {
@@ -37,8 +54,11 @@ export function LeadDetail({ lead, onUpdate }: Props) {
   };
 
   const handleStageChange = async (stage: Lead['stage']) => {
-    const updated = await updateStage(lead.id, stage);
-    onUpdate(updated);
+    onUpdate(await updateStage(lead.id, stage));
+  };
+
+  const handleOutreachUpdate = (updated: Outreach) => {
+    setOutreach((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
   };
 
   return (
@@ -91,32 +111,24 @@ export function LeadDetail({ lead, onUpdate }: Props) {
       <div className="mb-4 flex gap-2">
         <button
           onClick={() => handleDraft('sms')}
-          disabled={busy === 'draft-sms'}
+          disabled={busy === 'draft-sms' || !lead.phone}
           className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
+          title={!lead.phone ? 'Lead has no phone number' : ''}
         >
           {busy === 'draft-sms' ? 'Drafting...' : 'Draft SMS'}
         </button>
         <button
           onClick={() => handleDraft('email')}
-          disabled={busy === 'draft-email'}
+          disabled={busy === 'draft-email' || !lead.email}
           className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
+          title={!lead.email ? 'Lead has no email address' : ''}
         >
           {busy === 'draft-email' ? 'Drafting...' : 'Draft Email'}
         </button>
       </div>
 
-      {draft && (
-        <div className="rounded border border-blue-200 bg-blue-50 p-3">
-          <div className="mb-1 text-xs font-semibold uppercase text-blue-700">
-            Draft {draft.channel}
-          </div>
-          {draft.subject && (
-            <div className="mb-2 text-sm font-medium text-slate-800">Subject: {draft.subject}</div>
-          )}
-          <pre className="whitespace-pre-wrap text-sm text-slate-700">{draft.body}</pre>
-          <div className="mt-2 text-xs text-slate-500">{draft.rationale}</div>
-        </div>
-      )}
+      <div className="mb-2 text-xs font-semibold uppercase text-slate-500">Outreach</div>
+      <OutreachList outreach={outreach} onSent={handleOutreachUpdate} />
 
       {error && <div className="mt-3 rounded bg-rose-50 p-2 text-sm text-rose-700">{error}</div>}
     </div>
