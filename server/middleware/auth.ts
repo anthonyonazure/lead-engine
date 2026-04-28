@@ -1,11 +1,13 @@
 import type { Request, Response, NextFunction } from 'express';
+import { isDemoMode } from '../lib/demo.js';
 
-const PUBLIC_PATHS = new Set(['/api/health']);
+const PUBLIC_PATHS = new Set(['/api/health', '/api/admin/reset']);
 const PUBLIC_PREFIXES = ['/api/webhooks/'];
 
 export function requireApiKey(req: Request, res: Response, next: NextFunction) {
   if (PUBLIC_PATHS.has(req.path)) return next();
   if (PUBLIC_PREFIXES.some((p) => req.path.startsWith(p))) return next();
+  if (isDemoMode()) return next();
 
   const expected = process.env.LEAD_ENGINE_API_KEY;
   if (!expected) {

@@ -8,6 +8,8 @@
 
 **AI-driven lead management for small businesses. Capture → qualify → score → outreach → track. Not a chatbot.**
 
+> **Try the live demo →** _(URL — runs in `LEAD_ENGINE_DEMO_MODE`, outbound sends are simulated)_  ·  **Watch a 90-second walkthrough →** _(Loom)_
+
 Most "lead automation" gigs land in one of two ditches: a pile of SaaS subscriptions (Zapier + HubSpot + Twilio + ConvertKit + a dashboard tool) that breaks on the first vendor change, or a custom monolith only its author can maintain. This is the middle path — a single small codebase that does the actual jobs, runs in 60 seconds, and is simple enough to hand off.
 
 ![lead-engine dashboard](docs/assets/dashboard.png)
