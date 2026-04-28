@@ -71,9 +71,26 @@ lead-engine/
 
 Small businesses don't want six SaaS subscriptions. They want one system that works, that they can afford, that doesn't break on Tuesday because Zapier changed an API. lead-engine is a single repo, single command to run, with prompts living in plain markdown so the owner can edit them without a developer.
 
+## Security
+
+This is a portfolio piece, not a production CRM, but it's been audited and the obvious sharp edges are filed:
+
+- **Shared API key auth.** All non-webhook routes require `x-api-key`. Frontend reads `VITE_LEAD_ENGINE_API_KEY` at build time. In production with `LEAD_ENGINE_API_KEY` unset, the server returns 503 instead of opening up.
+- **Helmet** for standard security headers; `x-powered-by` disabled.
+- **CORS allowlist** via `LEAD_ENGINE_WEB_ORIGIN` (comma-separated). No reflective `*`.
+- **Rate limits** — 30/hr on `/api/ai/*`, 60/hr on `/api/outreach/*/send`, 30/min on `/api/webhooks/*`. Cuts off cost-amplification attacks before they hurt.
+- **Twilio signature verification** on `/api/webhooks/missed-call` when `TWILIO_AUTH_TOKEN` is set. Without verification + an outbound phone allowlist (`TWILIO_ALLOWED_COUNTRIES`, default `+1`), the missed-call webhook would be a SMS-pumping attack vector.
+- **E.164 validation + country allowlist** on every outbound SMS, even in simulation mode — no premium-rate / international-fraud blast radius.
+- **Input sanitization** at every public boundary — `lead.notes` capped at 4 KB, name/email/phone/etc. capped at 200-500 bytes, all control chars stripped before persistence and before flowing into LLM prompts.
+- **Prompt-injection delimiters** — submitter-controlled lead fields are wrapped in `<<UNTRUSTED>>...<</UNTRUSTED>>` and the system prompt explicitly tells the model to treat that content as data, not commands.
+- **Body size 16 KB** (down from 256 KB) — sized for legitimate lead forms, not for bulk-scraped payloads driving up AI cost.
+- **Production error responses** are generic (`'internal error'`); full traces logged server-side only.
+
+For real production deployment, you'd still want session-based auth + RBAC, encrypted SQLite at rest, and an inbound SMS reply handler — see `docs/architecture.md`.
+
 ## Tests
 
-16 unit tests cover lead CRUD, stage transitions, webhook handling (including end-to-end missed-call → SMS text-back), and SMS/email graceful-degradation behavior. Runs in CI on every push and pull request.
+31 unit tests cover lead CRUD, stage transitions, webhook handling (including end-to-end missed-call → SMS text-back), the API-key middleware, the outbound-SMS country allowlist, input sanitization, and graceful-degradation behavior for both SMS and email. Runs in CI on every push and pull request.
 
 ```bash
 pnpm test         # run once

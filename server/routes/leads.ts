@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { db, rowToLead, type LeadRow } from '../db.js';
 import { randomUUID } from 'node:crypto';
+import {
+  sanitizeText,
+  MAX_NOTES_BYTES,
+  MAX_NAME_BYTES,
+  MAX_GENERIC_BYTES,
+} from '../lib/sanitize-input.js';
 
 export const leadsRouter = Router();
 
@@ -19,16 +25,27 @@ leadsRouter.get('/:id', (req, res) => {
 });
 
 leadsRouter.post('/', (req, res) => {
-  const id = randomUUID();
-  const { name, email, phone, source, jobType, location, notes } = req.body ?? {};
+  const body = req.body ?? {};
+  const name = sanitizeText(body.name, MAX_NAME_BYTES);
+  const source = sanitizeText(body.source, MAX_GENERIC_BYTES);
   if (!name || !source) {
     res.status(400).json({ error: 'name and source required' });
     return;
   }
+  const id = randomUUID();
   db.prepare(
     `INSERT INTO leads (id, name, email, phone, source, job_type, location, notes)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(id, name, email ?? null, phone ?? null, source, jobType ?? null, location ?? null, notes ?? null);
+  ).run(
+    id,
+    name,
+    sanitizeText(body.email, MAX_GENERIC_BYTES),
+    sanitizeText(body.phone, MAX_GENERIC_BYTES),
+    source,
+    sanitizeText(body.jobType, MAX_GENERIC_BYTES),
+    sanitizeText(body.location, MAX_GENERIC_BYTES),
+    sanitizeText(body.notes, MAX_NOTES_BYTES)
+  );
   const row = db.prepare('SELECT * FROM leads WHERE id = ?').get(id) as LeadRow;
   res.status(201).json(rowToLead(row));
 });

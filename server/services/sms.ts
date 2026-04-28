@@ -11,13 +11,29 @@ function getClient() {
   return client;
 }
 
+const PHONE_RE = /^\+\d{8,15}$/;
+
+function isAllowedDestination(to: string): boolean {
+  if (!PHONE_RE.test(to)) return false;
+  const allowed = (process.env.TWILIO_ALLOWED_COUNTRIES ?? '+1')
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return allowed.some((p) => to.startsWith(p));
+}
+
 export interface SendSmsResult {
-  status: 'sent' | 'simulated' | 'error';
+  status: 'sent' | 'simulated' | 'error' | 'blocked';
   providerId?: string;
   error?: string;
 }
 
 export async function sendSms(to: string, body: string): Promise<SendSmsResult> {
+  if (!isAllowedDestination(to)) {
+    console.warn(`[sms:blocked] destination ${to} not in TWILIO_ALLOWED_COUNTRIES`);
+    return { status: 'blocked', error: 'destination not in allowed countries' };
+  }
+
   const from = process.env.TWILIO_FROM_NUMBER;
   const c = getClient();
 

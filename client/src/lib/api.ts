@@ -36,9 +36,13 @@ export interface Outreach {
 }
 
 const BASE = '/api';
+const API_KEY = (import.meta as ImportMeta & { env: Record<string, string | undefined> }).env
+  .VITE_LEAD_ENGINE_API_KEY;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, init);
+  const headers = new Headers(init?.headers);
+  if (API_KEY) headers.set('x-api-key', API_KEY);
+  const res = await fetch(`${BASE}${path}`, { ...init, headers });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`${init?.method ?? 'GET'} ${path} → ${res.status}: ${text}`);
