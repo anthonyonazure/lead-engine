@@ -25,7 +25,9 @@ leadsRouter.get('/:id', (req, res) => {
 });
 
 leadsRouter.post('/', (req, res) => {
-  const body = req.body ?? {};
+  // Express types req.body as `any`. Narrowing it to a record of `unknown`
+  // keeps every field read type-safe; sanitizeText already accepts `unknown`.
+  const body = (req.body ?? {}) as Record<string, unknown>;
   const name = sanitizeText(body.name, MAX_NAME_BYTES);
   const source = sanitizeText(body.source, MAX_GENERIC_BYTES);
   if (!name || !source) {
@@ -50,10 +52,12 @@ leadsRouter.post('/', (req, res) => {
   res.status(201).json(rowToLead(row));
 });
 
+const STAGES: readonly string[] = ['new', 'qualified', 'engaged', 'won', 'lost'];
+
 leadsRouter.patch('/:id/stage', (req, res) => {
-  const { stage } = req.body ?? {};
-  const allowed = ['new', 'qualified', 'engaged', 'won', 'lost'];
-  if (!allowed.includes(stage)) {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const stage = body.stage;
+  if (typeof stage !== 'string' || !STAGES.includes(stage)) {
     res.status(400).json({ error: 'invalid stage' });
     return;
   }

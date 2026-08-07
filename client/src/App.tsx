@@ -9,7 +9,9 @@ export function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    listLeads()
+    // `void` marks the promise as deliberately un-awaited: useEffect cannot be
+    // async, and the .finally() below already ends the chain.
+    void listLeads()
       .then((data) => {
         setLeads(data);
         if (data.length > 0) setSelected(data[0]);
@@ -49,7 +51,7 @@ export function App() {
         </div>
         {isDemo && (
           <button
-            onClick={handleResetDemo}
+            onClick={() => void handleResetDemo()}
             className="rounded border border-slate-300 bg-white px-3 py-1 text-xs hover:bg-slate-50"
           >
             Reset demo data

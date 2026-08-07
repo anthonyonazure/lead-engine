@@ -37,7 +37,7 @@ aiRouter.post('/score/:id', async (req, res, next) => {
 
 aiRouter.post('/draft/:id', async (req, res, next) => {
   try {
-    const channel = (req.query.channel === 'email' ? 'email' : 'sms') as 'sms' | 'email';
+    const channel = req.query.channel === 'email' ? 'email' : 'sms';
     const row = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id) as LeadRow | undefined;
     if (!row) {
       res.status(404).json({ error: 'lead not found' });

@@ -3,6 +3,14 @@ import request from 'supertest';
 import { app } from '../index.js';
 import { db } from '../db.js';
 
+// supertest types res.body as `any`. Reading it through an explicit shape keeps
+// the assertions type-checked instead of silently accepting anything.
+interface LeadBody {
+  id: string;
+  name: string;
+  stage: string;
+}
+
 beforeEach(() => {
   db.prepare('DELETE FROM outreach').run();
   db.prepare('DELETE FROM leads').run();
@@ -21,9 +29,10 @@ describe('GET /api/leads', () => {
     ).run();
     const res = await request(app).get('/api/leads');
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(1);
-    expect(res.body[0].name).toBe('Test User');
-    expect(res.body[0].stage).toBe('new');
+    const leads = res.body as LeadBody[];
+    expect(leads).toHaveLength(1);
+    expect(leads[0]?.name).toBe('Test User');
+    expect(leads[0]?.stage).toBe('new');
   });
 });
 
@@ -33,8 +42,9 @@ describe('POST /api/leads', () => {
       .post('/api/leads')
       .send({ name: 'New Lead', source: 'manual', email: 'x@example.com' });
     expect(res.status).toBe(201);
-    expect(res.body.name).toBe('New Lead');
-    expect(res.body.id).toBeTruthy();
+    const lead = res.body as LeadBody;
+    expect(lead.name).toBe('New Lead');
+    expect(lead.id).toBeTruthy();
   });
 
   it('rejects without name', async () => {
@@ -57,7 +67,7 @@ describe('PATCH /api/leads/:id/stage', () => {
       .patch('/api/leads/s-1/stage')
       .send({ stage: 'qualified' });
     expect(res.status).toBe(200);
-    expect(res.body.stage).toBe('qualified');
+    expect((res.body as LeadBody).stage).toBe('qualified');
   });
 
   it('rejects invalid stage', async () => {

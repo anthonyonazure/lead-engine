@@ -15,7 +15,9 @@ export const webhooksRouter = Router();
 const PHONE_RE = /^\+\d{8,15}$/;
 
 webhooksRouter.post('/website-form', (req, res) => {
-  const body = req.body ?? {};
+  // Express types req.body as `any`; narrowing to a record of `unknown` keeps
+  // each field read type-safe without pretending the payload was validated.
+  const body = (req.body ?? {}) as Record<string, unknown>;
   const name = sanitizeText(body.name, MAX_NAME_BYTES);
   if (!name) {
     res.status(400).json({ error: 'name required' });
@@ -43,7 +45,8 @@ webhooksRouter.post(
   requireTwilioSignature,
   async (req, res, next) => {
     try {
-      const fromNumber = sanitizeText(req.body?.fromNumber ?? req.body?.From, 32);
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const fromNumber = sanitizeText(body.fromNumber ?? body.From, 32);
       if (!fromNumber || !PHONE_RE.test(fromNumber)) {
         res.status(400).json({ error: 'fromNumber required (E.164 format)' });
         return;
@@ -58,7 +61,7 @@ webhooksRouter.post(
         return;
       }
 
-      const callDuration = sanitizeText(req.body?.callDuration ?? req.body?.CallDuration, 16);
+      const callDuration = sanitizeText(body.callDuration ?? body.CallDuration, 16);
 
       const id = randomUUID();
       db.prepare(

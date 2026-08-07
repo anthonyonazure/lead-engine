@@ -47,7 +47,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const text = await res.text().catch(() => '');
     throw new Error(`${init?.method ?? 'GET'} ${path} → ${res.status}: ${text}`);
   }
-  return res.json();
+  // res.json() is typed `any`; funnelling it through `unknown` keeps the cast to
+  // the caller's expected shape explicit instead of leaking `any` into callers.
+  const data: unknown = await res.json();
+  return data as T;
 }
 
 export const listLeads = () => request<Lead[]>('/leads');

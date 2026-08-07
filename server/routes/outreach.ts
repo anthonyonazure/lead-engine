@@ -98,7 +98,11 @@ outreachRouter.post('/:id/send', async (req, res, next) => {
 
 outreachRouter.patch('/:id', (req, res) => {
   const id = Number(req.params.id);
-  const { subject, body } = req.body ?? {};
+  // Express types req.body as `any`; narrow it, then accept only strings so a
+  // malformed payload falls back to the stored value instead of being written.
+  const patch = (req.body ?? {}) as Record<string, unknown>;
+  const subject = typeof patch.subject === 'string' ? patch.subject : undefined;
+  const body = typeof patch.body === 'string' ? patch.body : undefined;
   const row = db.prepare('SELECT * FROM outreach WHERE id = ?').get(id) as OutreachRow | undefined;
   if (!row) {
     res.status(404).json({ error: 'outreach not found' });
