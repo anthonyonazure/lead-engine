@@ -20,7 +20,9 @@ export function LeadDetail({ lead, onUpdate }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listOutreach(lead.id).then(setOutreach);
+    // `void` marks the promise as deliberately un-awaited: useEffect cannot be
+    // async, so the fetch is fire-and-forget by design.
+    void listOutreach(lead.id).then(setOutreach);
   }, [lead.id]);
 
   const refreshOutreach = async () => {
@@ -75,7 +77,7 @@ export function LeadDetail({ lead, onUpdate }: Props) {
         </div>
         <select
           value={lead.stage}
-          onChange={(e) => handleStageChange(e.target.value as Lead['stage'])}
+          onChange={(e) => void handleStageChange(e.target.value as Lead['stage'])}
           className="rounded border border-slate-300 bg-white px-2 py-1 text-sm"
         >
           <option value="new">New</option>
@@ -99,7 +101,7 @@ export function LeadDetail({ lead, onUpdate }: Props) {
           </div>
         ) : (
           <button
-            onClick={handleScore}
+            onClick={() => void handleScore()}
             disabled={busy === 'score'}
             className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
@@ -110,7 +112,7 @@ export function LeadDetail({ lead, onUpdate }: Props) {
 
       <div className="mb-4 flex gap-2">
         <button
-          onClick={() => handleDraft('sms')}
+          onClick={() => void handleDraft('sms')}
           disabled={busy === 'draft-sms' || !lead.phone}
           className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
           title={!lead.phone ? 'Lead has no phone number' : ''}
@@ -118,7 +120,7 @@ export function LeadDetail({ lead, onUpdate }: Props) {
           {busy === 'draft-sms' ? 'Drafting...' : 'Draft SMS'}
         </button>
         <button
-          onClick={() => handleDraft('email')}
+          onClick={() => void handleDraft('email')}
           disabled={busy === 'draft-email' || !lead.email}
           className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
           title={!lead.email ? 'Lead has no email address' : ''}

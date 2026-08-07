@@ -25,12 +25,18 @@ jobs:
       - run: bun run typecheck
       - run: bun run lint
       - name: tests
+        # Runs the repo's own suite (vitest on Node) rather than `bun test`.
+        # This is not a preference: server/db.ts loads better-sqlite3, a V8
+        # native addon Bun cannot dlopen, so under `bun test` three of the six
+        # test files crashed on import and the coverage figure was measured
+        # over the fragment that survived. On Node all 6 files and 31 tests
+        # run, and the coverage floor now lives in vitest.config.ts.
         run: |
           set +e
-          out=$(bun test --coverage 2>&1); code=$?
+          out=$(bun run test:coverage 2>&1); code=$?
           set -e
           echo "$out"
-          if echo "$out" | grep -q "0 test files matching"; then
+          if echo "$out" | grep -qE "0 test files matching|No tests found|No test files found"; then
             echo "GATE tests = NOT_APPLICABLE (no test files in this repo)" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi

@@ -45,7 +45,7 @@ export function OutreachList({ outreach, onSent }: Props) {
             </div>
             {o.status === 'draft' && (
               <button
-                onClick={() => handleSend(o.id)}
+                onClick={() => void handleSend(o.id)}
                 disabled={busy === o.id}
                 className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >

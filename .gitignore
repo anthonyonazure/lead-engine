@@ -7,3 +7,4 @@ dist/
 data/leads.db
 data/leads.db-*
 client/dist/
+.stryker-tmp/

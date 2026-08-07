@@ -3,6 +3,14 @@ import request from 'supertest';
 import { app } from '../index.js';
 import { db } from '../db.js';
 
+// supertest types res.body as `any`. Reading it through an explicit shape keeps
+// the assertions type-checked instead of silently accepting anything.
+interface WebhookBody {
+  id: string;
+  status: string;
+  textBack?: string;
+}
+
 beforeEach(() => {
   db.prepare('DELETE FROM outreach').run();
   db.prepare('DELETE FROM leads').run();
@@ -17,9 +25,10 @@ describe('POST /api/webhooks/website-form', () => {
       notes: 'Interested in pricing',
     });
     expect(res.status).toBe(201);
-    expect(res.body.id).toBeTruthy();
+    const created = res.body as WebhookBody;
+    expect(created.id).toBeTruthy();
 
-    const leads = db.prepare('SELECT * FROM leads WHERE id = ?').all(res.body.id);
+    const leads = db.prepare('SELECT * FROM leads WHERE id = ?').all(created.id);
     expect(leads).toHaveLength(1);
   });
 
@@ -37,14 +46,15 @@ describe('POST /api/webhooks/missed-call', () => {
       .post('/api/webhooks/missed-call')
       .send({ fromNumber: '+15551234567', callDuration: 22 });
     expect(res.status).toBe(201);
-    expect(res.body.textBack).toBe('simulated');
+    const created = res.body as WebhookBody;
+    expect(created.textBack).toBe('simulated');
 
     const outreach = db
       .prepare('SELECT * FROM outreach WHERE lead_id = ?')
-      .all(res.body.id) as Array<{ channel: string; status: string }>;
+      .all(created.id) as Array<{ channel: string; status: string }>;
     expect(outreach).toHaveLength(1);
-    expect(outreach[0].channel).toBe('sms');
-    expect(outreach[0].status).toBe('simulated');
+    expect(outreach[0]?.channel).toBe('sms');
+    expect(outreach[0]?.status).toBe('simulated');
   });
 
   it('rejects without fromNumber', async () => {
