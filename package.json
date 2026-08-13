@@ -87,5 +87,8 @@
     "qs": ">=6.15.2 <7",
     "shell-quote": ">=1.9.0 <2",
     "tsx": ">=4.22.0 <5"
+  },
+  "gauntlet": {
+    "coverageFloorPercent": 66
   }
 }

@@ -2,8 +2,18 @@
   "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-schema.json",
   "testRunner": "command",
   "commandRunner": {
-    "command": "node ./node_modules/.bin/vitest run"
+    "command": "bun run test"
   },
+  "mutate": [
+    "server/db.ts",
+    "server/index.ts",
+    "server/lib/sanitize-input.ts",
+    "server/middleware/auth.ts",
+    "server/routes/leads.ts",
+    "server/routes/webhooks.ts",
+    "server/services/email.ts",
+    "server/services/sms.ts"
+  ],
   "reporters": [
     "progress",
     "clear-text"
